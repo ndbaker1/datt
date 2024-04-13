@@ -8,8 +8,6 @@
 
 use std::{collections::HashMap, io::Write};
 
-use futures::{stream::FuturesOrdered, StreamExt};
-
 use crate::downloader::fetch;
 
 pub async fn run(
@@ -35,7 +33,7 @@ pub async fn run(
     let mut ep = 0usize;
     // create and ordered parallel set of futures to run fetching tasks
     // which can be refreshed once a single job errors
-    let mut tasks = FuturesOrdered::new();
+    let mut tasks = Vec::new();
     loop {
         // bump the episode counter
         ep += 1;
@@ -81,20 +79,37 @@ pub async fn run(
 
         // add an async task to download in this epsodes's video
         println!("queueing download for episode {} [{}]", ep, download_url);
-        tasks.push_back(async move {
-            for i in 0..3 {
-                if let Ok(buf) = fetch(&download_url).await {
-                    std::fs::File::create(&output_file_path)?.write_all(&buf)?;
-                    println!("saved episode {ep} to {output_file_path:?}");
-                    break;
+        tasks.push(tokio::spawn(async move {
+            // nested async block to allow result closure
+            async {
+                let mut backoff = 2;
+                for i in 0..backoff_count {
+                    if let Ok(buf) = fetch(&download_url).await {
+                        if buf.len() > 0 {
+                            std::fs::File::create(&output_file_path)?.write_all(&buf)?;
+                            println!("saved episode {ep} to {output_file_path:?}");
+                            return Ok(());
+                        }
+                        eprintln!("empty response for episode {ep}");
+                    }
+                    eprintln!("failed to download episode {ep}. (attempt {i}/{backoff_count})");
+                    // it seems that you can get rate limited pretty easily, so follow some
+                    // exponential backoff here if possible.
+                    tokio::time::sleep(std::time::Duration::from_secs(backoff)).await;
+                    backoff *= 2;
                 }
-                eprintln!("failed to download episode {ep}. (attempt {i})");
+                crate::Res::<()>::Err(
+                    format!("failed to download episode {ep} after {backoff_count} attempts.")
+                        .into(),
+                )
             }
-            crate::Res::<()>::Ok(())
-        });
+            .await
+            .unwrap();
+        }));
     }
-    // run all tasks to completion
-    tasks.count().await;
+    // join all tasks
+    futures::future::join_all(tasks).await;
+
     Ok(())
 }
 

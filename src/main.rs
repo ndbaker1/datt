@@ -4,11 +4,11 @@ mod downloader;
 
 #[derive(Parser)]
 #[clap(about = r#"
- _____     ______     ______   ______  
-/\  __-.  /\  __ \   /\__  _\ /\__  _\ 
-\ \ \/\ \ \ \  __ \  \/_/\ \/ \/_/\ \/ 
- \ \____-  \ \_\ \_\    \ \_\    \ \_\ 
-  \/____/   \/_/\/_/     \/_/     \/_/ 
+ _____     ______    ______   ______  
+/\  __ \  /\  __ \  /\__  _\ /\__  _\ 
+\ \ \/\ \ \ \  __ \ \/_/\ \/ \/_/\ \/ 
+ \ \____-  \ \_\ \_\   \ \_\    \ \_\ 
+  \/____/   \/_/\/_/    \/_/     \/_/ 
 
   Download All The Things.
 "#)]
@@ -39,9 +39,9 @@ enum Commands {
         /// Number of segments to try downloading in one batch
         #[arg(short, long, default_value_t = 10)]
         batch_size: usize,
-        /// Number of batches to send in advance using a reference for
+        /// Number of batches to run in parallel
         #[arg(short, long, default_value_t = 30)]
-        window_count: usize,
+        parallel: usize,
     },
 }
 
@@ -54,13 +54,13 @@ async fn main() -> Res<()> {
             url,
             output_file,
             batch_size,
-            window_count,
-        } => downloader::sflix::run(&url, &output_file, &batch_size, window_count).await?,
+            parallel,
+        } => downloader::sflix::run(&url, &output_file, batch_size, parallel).await?,
         Commands::Gogoanime {
             url,
             captcha,
             output_dir,
-        } => downloader::gogoanime::run(&url, &captcha, &output_dir).await?,
+        } => downloader::gogoanime::run(&url, &captcha, &output_dir, 5).await?,
     }
 
     Ok(())
