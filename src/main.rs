@@ -55,7 +55,7 @@ async fn main() -> Res<()> {
             output_file,
             batch_size,
             window_count,
-        } => downloader::sflix::run(url, output_file, batch_size, window_count).await?,
+        } => downloader::sflix::run(&url, &output_file, &batch_size, window_count).await?,
         Commands::Gogoanime {
             url,
             captcha,
