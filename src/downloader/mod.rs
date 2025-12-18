@@ -1,5 +1,5 @@
 pub mod gogoanime;
-pub mod sflix;
+pub mod megacloud;
 
 async fn fetch(url: &str) -> crate::Res<Vec<u8>> {
     Ok(reqwest::get(url)

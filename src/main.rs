@@ -55,7 +55,7 @@ async fn main() -> Res<()> {
             output_file,
             batch_size,
             parallel,
-        } => downloader::sflix::run(&url, &output_file, batch_size, parallel).await?,
+        } => downloader::megacloud::run(&url, &output_file, batch_size, parallel).await?,
         Commands::Gogoanime {
             url,
             captcha,
